@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка - Zapret</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/beercss@3.11.20/dist/cdn/beer.min.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/beercss@3.11.20/dist/cdn/beer.min.js"></script>
+<script src="/i18n.js"></script>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Google Sans", sans-serif;
+    background-color: #121212;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+main.responsive {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    padding: 15px;
+    overflow-y: hidden;
+}
+article.border.big {
+    flex: 1 1 0;
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    padding: 10px;
+    overflow-y: auto;
+    min-height: 0;
+}
+article p {
+    line-height: 1.2;
+    margin: 2px 0;
+    word-break: break-word;
+}
+button {
+    margin-top: 10px;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    background-color: #1e88e5;
+}
+nav.bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    background: #1e1e1e;
+    padding: 10px 0;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.5);
+}
+nav.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.85em;
+    color: #aaa;
+    text-decoration: none;
+}
+nav.bottom-nav a.active i,
+nav.bottom-nav a.active span { color: #1e88e5; }
+</style>
+<script type="module">
+import { spawn, toast } from '/kernelsu.js';
+
+function start_check() {
+    const checkButton = document.getElementById('check_button');
+    if (checkButton.disabled) return;
+    checkButton.disabled = true;
+    const outputDiv = document.getElementById("main_text");
+    outputDiv.innerHTML = '';
+
+    const scriptOutput = spawn("sh", ["/system/bin/zapret_check.sh"]);
+    scriptOutput.stdout.on('data', (data) => {
+        outputDiv.innerHTML += `<p>${data}</p>`;
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+    });
+    scriptOutput.on('exit', () => {
+        checkButton.disabled = false;
+    });
+    scriptOutput.on('error', () => {
+        toast(t('something_went_wrong'));
+        checkButton.disabled = false;
+    });
+}
+window.start_check = start_check;
+</script>
+</head>
+
+<body>
+<main class="responsive">
+    <article class="border big">
+        <div id="main_text"></div>
+    </article>
+    <div style="margin-top: 10px;">
+        <button id="check_button" onclick="start_check()">
+            <i>play_arrow</i> Начать
+        </button>
+    </div>
+</main>
+
+<nav class="bottom-nav">
+    <a href="index.html"><i>info</i><span>Инфо</span></a>
+    <a href="domains.html"><i>domain</i><span>Домены</span></a>
+    <a href="config.html"><i>build</i><span>Конфиг</span></a>
+    <a href="ipset.html"><i>lan</i><span>IP</span></a>
+    <a class="active" href="check.html"><i>check</i><span>Проверка</span></a>
+</nav>
+
+<script>
+if (!navigator.language.startsWith('ru')) {
+    Array.from(document.getElementsByClassName('translate')).forEach(e => {
+        e.innerText = t(e.id);
+    });
+}
+</script>
+</body>
+
+</html>

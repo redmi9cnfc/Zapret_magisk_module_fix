@@ -1,0 +1,90 @@
+#!/system/bin/sh
+
+pidof "nfqws" > /dev/null && echo "zapret is running" || echo "zapret is not running"
+
+if [ "$1" = "start" ]; then
+    check_iptables_support() {
+        if iptables -t mangle -A POSTROUTING -p tcp -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:12 -j ACCEPT 2>/dev/null; then
+            iptables -t mangle -D POSTROUTING -p tcp -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:12 -j ACCEPT 2>/dev/null
+            echo "2"
+        else
+            echo "3"
+        fi
+    }
+    use_iptables=$(check_iptables_support)
+
+    echo "Starting zapret...";
+
+    args=""
+
+    while IFS= read -r line; do
+        line="${line//\{hosts\}/"/data/adb/zapret/autohosts.txt"}"
+        line="${line//\{ignore\}/"/data/adb/zapret/ignore.txt"}"
+		line="${line//\{ipset\}/"/data/adb/zapret/ipset.txt"}"
+        line="${line//\{youtube\}/"/etc/youtube.txt"}"
+        line="${line//\{quicgoogle\}/"/etc/quic_initial_www_google_com.bin"}"
+        line="${line//\{tlsgoogle\}/"/etc/tls_clienthello_www_google_com.bin"}"
+        line="$(echo "$line" | sed -E 's/--wf-(tcp|udp)=[^ ]+//g')"
+        line="$(echo "$line" | sed -E 's/  +/ /g' | sed -E 's/^ //;s/ $//')"
+        args="$args $line"
+    done < /data/adb/zapret/config.txt
+
+    sysctl net.netfilter.nf_conntrack_tcp_be_liberal=1 > /dev/null;
+    cbOrig="-m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:12 -m mark ! --mark 0x40000000/0x40000000";
+    cbReply="-m connbytes --connbytes-dir=reply --connbytes-mode=packets --connbytes 1:6 -m mark ! --mark 0x40000000/0x40000000";
+
+    iptAdd() {
+        if [ "$use_iptables" = "3" ]; then cbOrig=""; cbReply=""; fi;
+        iptDPort="--dport $2"; iptSPort="--sport $2";
+        iptables -t mangle -I POSTROUTING -p $1 $iptDPort $cbOrig -j NFQUEUE --queue-num 200 --queue-bypass;
+        iptables -t mangle -I PREROUTING -p $1 $iptSPort $cbReply -j NFQUEUE --queue-num 200 --queue-bypass;
+        ip6tables -t mangle -I POSTROUTING -p $1 $iptDPort $cbOrig -j NFQUEUE --queue-num 200 --queue-bypass;
+        ip6tables -t mangle -I PREROUTING -p $1 $iptSPort $cbReply -j NFQUEUE --queue-num 200 --queue-bypass;
+    }
+
+    iptMultiPort() {
+        for current_port in $2; do
+            case "$current_port" in
+                *-*)
+                    for i in $(seq ${current_port%-*} ${current_port#*-}); do
+                        iptAdd "$1" "$i";
+                    done
+                    ;;
+                *)
+                    iptAdd "$1" "$current_port"
+                    ;;
+            esac
+        done
+    }
+
+    tcp_ports="$(echo $args | grep -oE 'filter-tcp=[0-9,-]+' | sed -e 's/.*=//g' -e 's/,/\n/g' -e 's/ /,/g' | sort -un)";
+    udp_ports="$(echo $args | grep -oE 'filter-udp=[0-9,-]+' | sed -e 's/.*=//g' -e 's/,/\n/g' -e 's/ /,/g' | sort -un)";
+    iptMultiPort "tcp" "$tcp_ports";
+    iptMultiPort "udp" "$udp_ports";
+
+    nfqws --uid=0:0 --qnum=200 $args > /dev/null & 
+    echo "zapret service started!"; exit 0; fi
+
+if [ "$1" = "stop" ]; then
+    iptables -t mangle -F PREROUTING; iptables -t mangle -F POSTROUTING;
+    ip6tables -t mangle -F PREROUTING; ip6tables -t mangle -F POSTROUTING;
+    pid=$(pidof nfqws)
+    if [ -n "$pid" ]; then
+        kill "$pid";
+    fi
+    echo "zapret service stopped!"; exit 0;
+fi;
+
+if [ "$1" = "autostart-on" ]; then
+    touch /data/adb/zapret/autostart;
+    echo "Autostart enabled"
+fi;
+
+if [ "$1" = "autostart-off" ]; then
+    rm /data/adb/zapret/autostart;
+    echo "Autostart disabled"
+fi;
+
+if [ -z "$1" ]; then
+    echo "zapret for Magisk. Source: https://github.com/bol-van/zapret. Build: https://github.com/ImMALWARE/zapret-magisk. Usage: zapret start, zapret stop, zapret autostart-on, zapret autostart-off.";
+fi;
