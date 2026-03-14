@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Домены - Zapret</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/beercss@3.11.20/dist/cdn/beer.min.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/beercss@3.11.20/dist/cdn/beer.min.js"></script>
+<script src="/i18n.js"></script>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Google Sans", sans-serif;
+    background-color: #121212;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+main {
+    flex: 1;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+h1 {
+    text-align: center;
+    font-size: 1.8em;
+}
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+textarea {
+    width: 100%;
+    height: 200px;
+    background: #1e1e1e;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 10px;
+    resize: none;
+    font-family: monospace;
+}
+button {
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+}
+button.save { background-color: #1e88e5; }
+button.undo { background-color: #757575; }
+nav.bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    background: #1e1e1e;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.5);
+    padding: 10px 0;
+}
+nav.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.85em;
+    color: #aaa;
+    text-decoration: none;
+}
+nav.bottom-nav a.active i,
+nav.bottom-nav a.active span { color: #1e88e5; }
+</style>
+<script type="module">
+import { exec, toast } from '/kernelsu.js';
+
+const autohostText = document.getElementById('autohosts_text');
+const ignoreText = document.getElementById('ignore_text');
+
+function loadDomains() {
+    exec("cat /data/adb/zapret/autohosts.txt").then(({stdout})=>{
+        autohostText.value = stdout;
+    });
+    exec("cat /data/adb/zapret/ignore.txt").then(({stdout})=>{
+        ignoreText.value = stdout;
+    });
+}
+window.loadDomains = loadDomains;
+window.onload = loadDomains;
+
+function saveAutohosts() {
+    exec(`echo "${autohostText.value}" > /data/adb/zapret/autohosts.txt`).then(()=>{
+        toast("Autohosts сохранены");
+    });
+}
+function undoAutohosts() { loadDomains(); }
+
+function saveIgnore() {
+    exec(`echo "${ignoreText.value}" > /data/adb/zapret/ignore.txt`).then(()=>{
+        toast("Ignore сохранен");
+    });
+}
+function undoIgnore() { loadDomains(); }
+
+window.saveAutohosts = saveAutohosts;
+window.undoAutohosts = undoAutohosts;
+window.saveIgnore = saveIgnore;
+window.undoIgnore = undoIgnore;
+</script>
+</head>
+
+<body>
+<main>
+    <h1>Домены Zapret</h1>
+
+    <div class="section">
+        <h3>Autohosts</h3>
+        <textarea id="autohosts_text"></textarea>
+        <div>
+            <button class="save" onclick="saveAutohosts()"><i>save</i> Сохранить</button>
+            <button class="undo" onclick="undoAutohosts()"><i>undo</i> Отменить</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Ignore</h3>
+        <textarea id="ignore_text"></textarea>
+        <div>
+            <button class="save" onclick="saveIgnore()"><i>save</i> Сохранить</button>
+            <button class="undo" onclick="undoIgnore()"><i>undo</i> Отменить</button>
+        </div>
+    </div>
+</main>
+
+<nav class="bottom-nav">
+    <a href="index.html"><i>info</i><span>Инфо</span></a>
+    <a class="active" href="domains.html"><i>domain</i><span>Домены</span></a>
+    <a href="config.html"><i>build</i><span>Конфиг</span></a>
+    <a href="ipset.html"><i>lan</i><span>IP</span></a>
+    <a href="check.html"><i>check</i><span>Проверка</span></a>
+</nav>
+</body>
+</html>

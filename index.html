@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zapret Fix</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/beercss@3.11.20/dist/cdn/beer.min.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/beercss@3.11.20/dist/cdn/beer.min.js"></script>
+    <script src="/i18n.js"></script>
+    <style>
+        body {
+            font-family: "Google Sans", sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1#main_status {
+            font-size: 2em;
+            margin-bottom: 25px;
+            color: #ffffff;
+        }
+
+        button#toggle_btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1.3em;
+            padding: 16px 32px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            width: 80%;
+            max-width: 320px;
+            background-color: #1e88e5; /* синий */
+            color: #ffffff;
+            border: none;
+            transition: background 0.2s;
+        }
+
+        button#toggle_btn:hover {
+            background-color: #1565c0;
+            cursor: pointer;
+        }
+
+        .autostart-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 80%;
+            max-width: 320px;
+            background: #1f1f1f;
+            padding: 12px 18px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+
+        .autostart-container span {
+            font-size: 1em;
+        }
+
+        nav.bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            background: #1e1e1e;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.5);
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        nav.bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.85em;
+            color: #aaaaaa;
+            text-decoration: none;
+        }
+
+        nav.bottom-nav a.active i,
+        nav.bottom-nav a.active span {
+            color: #1e88e5;
+        }
+
+        /* переключатель в темной теме */
+        .switch span {
+            background-color: #555 !important;
+        }
+
+        .switch input:checked + span {
+            background-color: #1e88e5 !important;
+        }
+    </style>
+    <script type="module">
+        import { exec, toast } from '/kernelsu.js';
+
+        const main_status = document.getElementById('main_status');
+        const main_icon = document.getElementById('main_icon');
+        const main_note = document.getElementById('main_note');
+        const autostart = document.getElementById('autostart');
+        const autostart_note = document.getElementById('autostart_note');
+
+        function updateStatus(running) {
+            if (running) {
+                main_status.innerText = "Zapret включён";
+                main_icon.innerText = 'stop';
+                main_note.innerText = 'Выключить';
+            } else {
+                main_status.innerText = "Zapret не включён";
+                main_icon.innerText = 'play_arrow';
+                main_note.innerText = 'Включить';
+            }
+        }
+
+        exec("zapret status").then(({ stdout }) => updateStatus(stdout.includes("is running")));
+        exec('[ -f "/data/adb/zapret/autostart" ]').then(({ errno }) => autostart.checked = (errno === 0));
+
+        function start_stop() {
+            if (main_note.innerText === 'Выключить') {
+                exec("zapret stop").then(({ stdout }) => {
+                    toast(stdout);
+                    updateStatus(false);
+                });
+            } else {
+                exec("zapret start").then(({ stdout }) => {
+                    toast(stdout);
+                    updateStatus(true);
+                });
+            }
+        }
+
+        function manage_autostart(state) {
+            if (state) {
+                exec("zapret autostart-on").then(({ stdout }) => {
+                    toast(stdout);
+                    autostart_note.innerText = 'Автозапуск включён';
+                });
+            } else {
+                exec("zapret autostart-off").then(({ stdout }) => {
+                    toast(stdout);
+                    autostart_note.innerText = 'Автозапуск выключён';
+                });
+            }
+        }
+
+        window.start_stop = start_stop;
+        window.manage_autostart = manage_autostart;
+    </script>
+</head>
+
+<body>
+    <main>
+        <h1 id="main_status">...</h1>
+        <button id="toggle_btn" onclick="start_stop()">
+            <i id="main_icon"></i>
+            <span id="main_note">...</span>
+        </button>
+        <div class="autostart-container">
+            <span id="autostart_note">Автозапуск</span>
+            <label class="switch">
+                <input type="checkbox" id="autostart" onchange="manage_autostart(this.checked)">
+                <span></span>
+            </label>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a class="active" href="index.html"><i>info</i><span>Инфо</span></a>
+        <a href="domains.html"><i>domain</i><span>Домены</span></a>
+        <a href="config.html"><i>build</i><span>Конфиг</span></a>
+        <a href="ipset.html"><i>lan</i><span>IP</span></a>
+        <a href="check.html"><i>check</i><span>Проверка</span></a>
+    </nav>
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+id=zapretfix
+name=zapret_fix
+version=1.8.2
+versionCode=23
+author=MALWARE, 404unlocked
+description=Ускорение устаревших серверов. Нажмите Action, чтобы включить/отключить. Оригинальный автор: https://t.me/immalware
+Модифицировал: https://t.me/unlockedkit
+updateJson=https://raw.githubusercontent.com/ImMALWARE/zapret-magisk/master/update.json
